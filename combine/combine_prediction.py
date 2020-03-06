@@ -6,6 +6,20 @@ def describe(predictions):
     num_classes = len(predictions[0][0])
     return num_classifiers, num_examples, num_classes
 
+def majority_vote(labels):
+    num_examples = len(labels[0])
+    num_classifiers = len(labels)
+    
+    final_prediction = []
+    for example_index in range(num_examples):
+        counts = {}
+        for clf_index in range(num_classifiers):
+            if labels[clf_index][example_index] not in counts:
+                counts[labels[clf_index][example_index]] = 0
+            counts[labels[clf_index][example_index]] += 1
+        final_prediction.append(max(counts, key=counts.get))
+    return np.array(final_prediction)
+
 def product_rule(predictions):
     num_classifiers, num_examples, num_classes = describe(predictions)
     final_prediction = []

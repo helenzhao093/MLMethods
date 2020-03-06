@@ -6,8 +6,7 @@ import numpy as np
 from sklearn.metrics import roc_curve, roc_auc_score, f1_score, precision_score, recall_score, accuracy_score
 
 class HomogeneousEmsemble():
-    def __init__(self, split_test, split_train, selector, classifier, combine='median'):
-        self.split_test = split_test
+    def __init__(self, split_train, selector, classifier, combine='median'):
         self.split_train = split_train
         self.selector = selector
         self.classifier = classifier
@@ -36,34 +35,49 @@ class HomogeneousEmsemble():
             clf.fit(X_train, y_train)
             self.emsemble.append(clf)
         
+    def transform(self, index, X):
+        X_temp = X
+        if self.selector.__class__.__name__ == 'EmsembleFS':
+            X_temp = np.delete(X, self.selectors[index].remove, axis=1)
+        else:
+            X_temp = self.selectors[index].transform(X)
+        return X_temp
+                
     def predict(self, X):
-        predict_probas = []
-        num_clf = len(self.emsemble)
-        for clf_index in range(num_clf):
+        if self.combine == 'majority-vote':
+            return self.combine_labels(X)
+        else:
+            return self.combine_predictions(X)
+    
+    def combine_labels(self, X):
+        labels = []
+        for clf_index in range(len(self.emsemble)):
             clf = self.emsemble[clf_index]
-            X_temp = X
-            if self.selector.__class__.__name__ == 'EmsembleFS':
-                X_temp = np.delete(X, self.selectors[clf_index].remove, axis=1)
-            else:
-                X_temp = self.selectors[clf_index].transform(X)
+            X_temp = self.transform(clf_index, X)
+            labels.append(clf.predict(X_temp))
+        return majority_vote(labels)
+            
+    def combine_predictions(self, X):
+        predict_probas = []
+        for clf_index in range(len(self.emsemble)):
+            clf = self.emsemble[clf_index]
+            X_temp = self.transform(clf_index, X)
+
             if hasattr(clf, "predict_proba"):
                 predict_probas.append(clf.predict_proba(X_temp))
             elif hasattr(clf, "decision_function"):
                 predict_probas.append(self.normalize(clf.decision_function(X_temp)))
-        return self.combine_predictions(predict_probas)
-        
-            
-    def combine_predictions(self, predictions):
+    
         if self.combine == 'median':
-            return median_rule(predictions)
+            return median_rule(predict_probas)
         elif self.combine == 'sum':
-            return sum_rule(predictions)
+            return sum_rule(predict_probas)
         elif self.combine == 'max':
-            return max_rule(predictions)
+            return max_rule(predict_probas)
         elif self.combine == 'min':
-            return min_rule(predictions)
+            return min_rule(predict_probas)
         elif self.combine == 'product':
-            return product_rule(predictions)
+            return product_rule(predict_probas)
     
     def get_scores(self, y, y_pred):
         accuracy = accuracy_score(y, y_pred)
