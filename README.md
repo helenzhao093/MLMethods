@@ -137,6 +137,7 @@ for train_index, test_index in CVSplitter.split(X, y):
         feature_selector = EmsembleFS(SelectFromModel(estimator= LogisticRegression()), shuffle_splitter, combine='vote-threshold', threshold=3)
         feature_selector.fit(X_train, y_train)
 
+        # threshold classifier
         clf = ThresholdClassifier(LogisticRegression())
         clf.fit(feature_selector.transform(X_train), y_train)
         clf.optimize_threshold(feature_selector.transform(X_holdout), y_holdout)
