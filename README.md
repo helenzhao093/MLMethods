@@ -1,4 +1,4 @@
-# Machine Learning Methods
+# Emsemble
 Emsembles are meta-estimators that fit a number of classifiers on various subsets of the dataset. 
 
 ## Emsemble Feature Selection
@@ -78,4 +78,62 @@ for train_index, test_index in splitter.split(X, y):
     emsemble.fit(X_dev,y_dev)
     y_pred = emclf.predict(X_test)
     results = results.append(emclf.get_scores(y_test, emclf.predict(X_test)), ignore_index=True)
+```
+
+# Threshold Classifier
+Threshold classifier fits the training dataset with the underlying classifier and calculates the optimal prediction score for thresold each class label that yields the highest classification performance on the holdout dataset. An example is predicted as class c if the prediction score for class c is above the threshold for class c. An example can be labeled as multiple classes.
+
+### Simple Multilabel Example
+Divided the 3 class dataset into train, holdout, and test sets. 
+Train the underlying classifier on the training set. 
+Compute the optimal prediction threshold for each class on the holdout set. 
+Predict the class labels of the test set. predict returns a 2D array (n_samples, n_classes) - each row represents the subset of class labels for an example. 
+
+```python
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+
+X_dev, X_train, y_dev, y_test = train_test_split(X, y, test_size=0.3)
+X_train, X_holdout, y_train, y_test = train_test_split(X_train, y_train, test_size=0.2)
+clf = ThresholdClassifier(LogisticRegression(), multiclass=True)
+clf.fit(X_train, y_train)
+clf.optimize_threshold(X_holdout, y_holdout)
+print(clf.predict(X_test))
+array([[0, 0, 1],
+       [0, 0, 1],
+       [1, 1, 0],
+       [1, 1, 1]])
+
+# calculate the performance for class label 1, the corresponding predictions are column index 1 in predictions
+clf.get_scores(y_test, predictions[:,1], 1))
+{'accuracy': 0.956140350877193, 
+ 'precision': 0.9565217391304348, 
+ 'recall': 0.9705882352941176, 
+ 'auc': 0.952685421994885, 
+ 'f1': 0.9635036496350365}
+
+```
+
+### Cross Validation Example
+
+```python
+results = pd.DataFrame(columns=["accuracy", "precision", "recall", "auc", "f1"])
+base_selector = SelectFromModel(estimator= LogisticRegression())
+shuffle_splitter = ShuffleSplit(n_splits=5, test_size=.2)
+CVSplitter = StratifiedKFold(n_splits=5)
+for train_index, test_index in CVSplitter.split(X, y):
+    X_dev, X_test = X[train_index], X[test_index]
+    y_dev, y_test = y[train_index], y[test_index]
+    for train_index, test_index in shuffle_splitter.split(X_dev, y_dev):
+        X_train, X_holdout = X[train_index], X[test_index]
+        y_train, y_holdout = y[train_index], y[test_index]
+        feature_selector = EmsembleFS(base_selector, shuffle_splitter, combine='vote-threshold', threshold=3)
+        feature_selector.fit(X_train, y_train)
+        estimator = LogisticRegression()
+        clf = ThresholdClassifier(estimator)
+        clf.fit(feature_selector.transform(X_train), y_train)
+        clf.optimize_threshold(feature_selector.transform(X_holdout), y_holdout)
+        predictions = clf.predict(feature_selector.transform(X_test))
+        results = results.append(clf.get_scores(y_test, predictions[:,1]), ignore_index=True)
+
 ```
