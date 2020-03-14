@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.metrics import roc_curve, roc_auc_score, f1_score, precision_score, recall_score, accuracy_score
 
 class HomogeneousEmsemble():
-    def __init__(self, split_train, selector, classifier, combine='median'):
+    def __init__(self, split_train, classifier, selector=None, combine='median'):
         self.split_train = split_train
         self.selector = selector
         self.classifier = classifier
@@ -25,13 +25,14 @@ class HomogeneousEmsemble():
             # run feature selection algorithm on train
             X_train, X_holdout = X[train_index], X[test_index]
             y_train, y_holdout = y[train_index], y[test_index]
-            selector = copy.copy(self.selector) if self.selector.__class__.__name__ == 'EmsembleFS' else base.clone(self.selector)
-            selector.fit(X_train, y_train)
-            X_train = selector.transform(X_train)
-            self.selectors.append(selector)
+            if self.selector is not None:
+                selector = copy.copy(self.selector) if self.selector.__class__.__name__ == 'EmsembleFS' else base.clone(self.selector)
+                selector.fit(X_train, y_train)
+                X_train = selector.transform(X_train)
+                self.selectors.append(selector)
 
             # run classifier on transformed data 
-            clf = base.clone(self.classifier)
+            clf = base.clone(self.classifier) 
             clf.fit(X_train, y_train)
             self.emsemble.append(clf)
         
@@ -53,7 +54,9 @@ class HomogeneousEmsemble():
         labels = []
         for clf_index in range(len(self.emsemble)):
             clf = self.emsemble[clf_index]
-            X_temp = self.transform(clf_index, X)
+            X_temp = X
+            if self.selector is not None:
+                X_temp = self.transform(clf_index, X)
             labels.append(clf.predict(X_temp))
         return majority_vote(labels)
             
@@ -61,12 +64,15 @@ class HomogeneousEmsemble():
         predict_probas = []
         for clf_index in range(len(self.emsemble)):
             clf = self.emsemble[clf_index]
-            X_temp = self.transform(clf_index, X)
+            X_temp = X
+            if self.selector is not None:
+                X_temp = self.transform(clf_index, X)
 
             if hasattr(clf, "predict_proba"):
                 predict_probas.append(clf.predict_proba(X_temp))
             elif hasattr(clf, "decision_function"):
                 predict_probas.append(self.normalize(clf.decision_function(X_temp)))
+                return 
     
         if self.combine == 'median':
             return median_rule(predict_probas)
@@ -80,13 +86,12 @@ class HomogeneousEmsemble():
             return product_rule(predict_probas)
     
     def get_scores(self, y, y_pred):
-        accuracy = accuracy_score(y, y_pred)
-        precision = precision_score(y, y_pred)
-        recall = recall_score(y, y_pred)
-        roc_auc = roc_auc_score(y, y_pred)
-        f1 = f1_score(y, y_pred)
-        return {'accuracy' : accuracy, 
-                'precision': precision,  
-                'recall': recall, 
-                'auc': roc_auc, 
-                'f1' : f1}        
+        return {'accuracy' : accuracy_score(y, y_pred), 
+                'precision': precision_score(y, y_pred),  
+                'recall': recall_score(y, y_pred), 
+                'auc': roc_auc_score(y, y_pred), 
+                'f1' : f1_score(y, y_pred)} 
+    
+    def score(self, X, y):
+        prediction = self.predict(X)
+        return self.get_scores(y, prediction)

@@ -40,8 +40,9 @@ splitter = ShuffleSplit(n_splits=5, test_size=.2)
 emsembleFS = EmsembleFS(selector, splitter, combine='vote-threshold', threshold=4)
 emsembleFS.fit(X, y)
 emsembleFS.selection_indices
-
+"""
 array([ 3,  6,  7,  9, 10, 12, 20, 21, 22, 23, 26, 27])
+"""
 ```
 
 ## Homogeneous Emsemble
@@ -71,13 +72,23 @@ selector = RFECV(estimator, step=1, cv=5)
 shuffle_splitter = ShuffleSplit(n_splits=5, test_size=.2)
 emsembleFS = EmsembleFS(selector, shuffle_splitter, combine='vote-threshold', threshold=4)
 
-clf = RandomForestClassifier(n=1000)
+clf = LogisticRegression(penalty='l2')
 CVSplitter = StratifiedKFold(n_splits=5)
 for train_index, test_index in splitter.split(X, y):
-    emsemble = HomogeneousEmsemble(shuffle_splitter, emsembleFS, clf, combine='min')
-    emsemble.fit(X_dev,y_dev)
-    y_pred = emclf.predict(X_test)
-    results = results.append(emclf.get_scores(y_test, emclf.predict(X_test)), ignore_index=True)
+    X_train, X_holdout = X[train_index], X[test_index]
+    y_train, y_holdout = y[train_index], y[test_index]
+
+    # run feature selection
+    emsembleFS = EmsembleFS(selector, splitter, combine='intersection')
+    emsembleFS.fit(X_train, y_train)
+    X_train_tranformed = emsembleFS.fit(X_train)
+    X_test_transformed = emsembleFS.fit(X_test)
+    
+    # create homogeneous emsemble
+    emsemble = HomogeneousEmsemble(shuffle_splitter, clf, combine='min')
+    emsemble.fit(X_train_tranformed, y_train)
+    y_pred = emclf.predict(X_test_transformed)
+    results = results.append(emclf.get_scores(y_test,y_pred), ignore_index=True)
 ```
 
 # Threshold Classifier
@@ -94,11 +105,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 
 X_dev, X_train, y_dev, y_test = train_test_split(X, y, test_size=0.3)
-X_train, X_holdout, y_train, y_test = train_test_split(X_train, y_train, test_size=0.2)
-clf = ThresholdClassifier(LogisticRegression(), multiclass=True)
+X_train, X_holdout, y_train, y_holdout = train_test_split(X_train, y_train, test_size=0.2)
+clf = ThresholdClassifier(LogisticRegression(), multilabel=True)
 clf.fit(X_train, y_train)
 clf.optimize_threshold(X_holdout, y_holdout)
-clf.predict(X_test)
+predictions = clf.predict(X_test)
 """
 array([[0, 0, 1],
        [0, 0, 1],
@@ -123,6 +134,10 @@ clf.get_scores(y_test, predictions[:,1], 1))
 - Results in N classifiers for each fold. 
 
 ```python
+from sklearn.model_selection import StratifiedKFold, ShuffleSplit
+from sklearn.feature_selection import SelectFromModel
+from sklearn.linear_model import LogisticRegression
+
 results = pd.DataFrame(columns=["accuracy", "precision", "recall", "auc", "f1"]) 
 shuffle_splitter = ShuffleSplit(n_splits=5, test_size=.2)
 CVSplitter = StratifiedKFold(n_splits=5)

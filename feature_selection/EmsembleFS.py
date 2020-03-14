@@ -34,11 +34,12 @@ class EmsembleFS():
         self.selections = []
         # split into train holdout
         for train_index, test_index in self.splitter.split(X, y):
+            print("running FS")
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]
             # run fs on each subset
             selector = base.clone(self.selector)
-            selector.fit(X, y)
+            selector.fit(X_train, y_train)
             self.rankings.append(self.get_rankings(selector))
             self.selections.append(self.get_selections(selector))
         self.selections = np.array(self.selections)
