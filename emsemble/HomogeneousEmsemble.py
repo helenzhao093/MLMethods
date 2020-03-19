@@ -71,8 +71,7 @@ class HomogeneousEmsemble():
             if hasattr(clf, "predict_proba"):
                 predict_probas.append(clf.predict_proba(X_temp))
             elif hasattr(clf, "decision_function"):
-                predict_probas.append(self.normalize(clf.decision_function(X_temp)))
-                return 
+                predict_probas.append(self.normalize(clf.decision_function(X_temp))) 
     
         if self.combine == 'median':
             return median_rule(predict_probas)

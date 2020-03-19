@@ -22,7 +22,7 @@ class BaselineClassifiers():
         return predictions
 
     def get_scores(self, y, y_preds):
-        results = pd.DataFrame(columns=["classifier", "accuracy", "precision", "recall", "roc", "f1"])
+        results = pd.DataFrame(columns=["classifer", "accuracy", "precision", "recall", "roc", "f1"])
         for i, y_pred in enumerate(y_preds):
             accuracy = accuracy_score(y, y_pred)
             precision = precision_score(y, y_pred)

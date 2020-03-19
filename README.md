@@ -35,7 +35,7 @@ from sklearn.feature_selection import RFECV
 from sklearn.model_selection import ShuffleSplit
 
 estimator = LogisticRegression()
-selector = RFECV(estimator, step=1, cv=5)
+selector = RFECV(estimator, step=0.1, cv=5)
 splitter = ShuffleSplit(n_splits=5, test_size=.2)
 emsembleFS = EmsembleFS(selector, splitter, combine='vote-threshold', threshold=4)
 emsembleFS.fit(X, y)
@@ -68,27 +68,26 @@ from sklearn.model_selection import StratifiedKFold, ShuffleSplit
 
 results = pd.DataFrame(columns=["accuracy", "precision", "recall", "auc", "f1"])
 estimator = LogisticRegression()
-selector = RFECV(estimator, step=1, cv=5)
+selector = RFECV(estimator, step=0.1, cv=5)
 shuffle_splitter = ShuffleSplit(n_splits=5, test_size=.2)
-emsembleFS = EmsembleFS(selector, shuffle_splitter, combine='vote-threshold', threshold=4)
 
 clf = LogisticRegression(penalty='l2')
 CVSplitter = StratifiedKFold(n_splits=5)
 for train_index, test_index in splitter.split(X, y):
-    X_train, X_holdout = X[train_index], X[test_index]
-    y_train, y_holdout = y[train_index], y[test_index]
+    X_train, X_test = X[train_index], X[test_index]
+    y_train, y_test = y[train_index], y[test_index]
 
     # run feature selection
     emsembleFS = EmsembleFS(selector, splitter, combine='intersection')
     emsembleFS.fit(X_train, y_train)
-    X_train_tranformed = emsembleFS.fit(X_train)
-    X_test_transformed = emsembleFS.fit(X_test)
+    X_train_tranformed = emsembleFS.transform(X_train)
+    X_test_transformed = emsembleFS.transform(X_test)
     
     # create homogeneous emsemble
     emsemble = HomogeneousEmsemble(shuffle_splitter, clf, combine='min')
     emsemble.fit(X_train_tranformed, y_train)
-    y_pred = emclf.predict(X_test_transformed)
-    results = results.append(emclf.get_scores(y_test,y_pred), ignore_index=True)
+    y_pred = emsemble.predict(X_test_transformed)
+    results = results.append(emsemble.get_scores(y_test,y_pred), ignore_index=True)
 ```
 
 # Threshold Classifier
