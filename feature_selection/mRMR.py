@@ -128,7 +128,8 @@ class mRMR():
             self.scores = FCQ(X, y)
         elif self.score_func == 'RFCQ':
             self.scores = RFCQ(X, y)
-    
+        self.score_ = self.scores
+
     def transform(self, X, k):
         num_features = len(X[0])
         order = self.scores.argsort().argsort()
@@ -136,6 +137,7 @@ class mRMR():
         if k == 'all' or k >= num_features:
             self.selected_indices = np.array([i for i in range(num_features)])
         else:
+            # higher the rank, higher the score
             min_rank_select = num_features - k
             for i in range(len(order)):
                 if order[i] >= min_rank_select:

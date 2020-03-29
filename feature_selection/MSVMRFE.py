@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.model_selection import StratifiedKFold
 from sklearn.svm import LinearSVC
 
+# http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.177.9052&rep=rep1&type=pdf
 class MSVMRFE():
     def __init__(self, step=0.1, cv=None, num_runs=5):
         self.step = step
