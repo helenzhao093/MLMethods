@@ -55,7 +55,7 @@ class EmsembleFS():
             if self.get_selections(selector) is not None:
                 self.selections.append(self.get_selections(selector))
             
-    def fit(self, X, y):
+    def fit(self, X, y, combine=True):
         self.rankings = []
         self.selections = []
         # split into train holdout
@@ -69,30 +69,31 @@ class EmsembleFS():
             self.rankings.append(self.get_rankings(selector))
             self.selections.append(self.get_selections(selector))
         self.selections = np.array(self.selections)
-        #self.combine_rankings()
+        if combine == True:
+            self.combine_rankings(self.combine, self.threshold)
         
     def normalize(self, y_scores):
         return np.array([(y_scores[i] - y_scores.min()) / (y_scores.max() - y_scores.min()) for i in range(len(y_scores))])
         
     def combine_rankings(self, combine, threshold):
         if combine == 'union':
-            self.selection_indices, self.selection, self.remove = union(np.array(self.selections))
+            self.selection_indices, self.selection = union(np.array(self.selections))
         elif combine == 'intersection':
-            self.selection_indices, self.selection, self.remove = intersection(np.array(self.selections))
+            self.selection_indices, self.selection = intersection(np.array(self.selections))
         elif combine == 'vote-threshold':
-            self.selection_indices, self.selection, self.remove = threshold_union(np.array(self.selections), threshold)
+            self.selection_indices, self.selection = threshold_union(np.array(self.selections), threshold)
         elif combine == 'min-rank':
-            self.selection_indices, self.selection, self.remove = threshold_score(self.rankings, combine, threshold)
+            self.selection_indices, self.selection = threshold_score(self.rankings, combine, threshold)
         elif combine == 'median-rank':
-            self.selection_indices, self.selection, self.remove = threshold_score(self.rankings, combine, threshold)
+            self.selection_indices, self.selection  = threshold_score(self.rankings, combine, threshold)
         elif combine == 'mean-rank':
-            self.selection_indices, self.selection, self.remove = threshold_score(self.rankings, combine, threshold)
+            self.selection_indices, self.selection  = threshold_score(self.rankings, combine, threshold)
         elif combine == 'gmean-rank':
-            self.selection_indices, self.selection, self.remove = threshold_score(self.rankings, combine, threshold)
+            self.selection_indices, self.selection = threshold_score(self.rankings, combine, threshold)
 
     def transform(self, X):
-        return np.delete(X, self.remove, axis=1)
+        return X[:, self.selection_indices] #np.delete(X, self.remove, axis=1)
     
     def fit_transform(self, X, y):
         self.fit(X, y)
-        return np.delete(X, self.remove, axis=1)
+        return X[:, self.selection_indices] #np.delete(X, self.remove, axis=1)

@@ -11,15 +11,15 @@ def intersection(selections):
 def threshold_union(selections, threshold):
     selection = [] 
     selection_indices = []
-    remove = []
+    #remove = []
     for i in range(len(selections[0])):
         if selections[:,i].sum() >= threshold:
             selection.append(True)
             selection_indices.append(i)
         else:
             selection.append(False)
-            remove.append(i)
-    return np.array(selection_indices), np.array(selection), np.array(remove)
+            #remove.append(i)
+    return np.array(selection_indices), np.array(selection) #, np.array(remove)
 
 def get_scores(rankings, column_index):
     return np.array([rankings[row_index][column_index] for row_index in range(len(rankings))])
@@ -36,7 +36,7 @@ def threshold_score(rankings, scoring, threshold):
         ranking = gmean_rank(rankings)
     selection = [] 
     selection_indices = []
-    remove = []
+    #remove = []
     num_features = math.ceil(threshold * len(ranking))
     for i in range(len(ranking)):
         if ranking[i] < num_features:
@@ -44,8 +44,8 @@ def threshold_score(rankings, scoring, threshold):
             selection_indices.append(i)
         else:
             selection.append(False)
-            remove.append(i)
-    return np.array(selection_indices), np.array(selection), np.array(remove)
+            #remove.append(i)
+    return np.array(selection_indices), np.array(selection) #, np.array(remove)
 
 def min_rank(rankings):
     agg_scores = []
