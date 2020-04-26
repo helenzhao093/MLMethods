@@ -55,11 +55,12 @@ class EmsembleFS():
             if self.get_selections(selector) is not None:
                 self.selections.append(self.get_selections(selector))
             
-    def fit(self, X, y, combine=True):
+    def fit(self, X, y, combine=True, groups=None):
         self.rankings = []
         self.selections = []
         # split into train holdout
-        for train_index, test_index in self.splitter.split(X, y):
+        groups_split = y if groups is None else groups
+        for train_index, test_index in self.splitter.split(X, groups_split):
             print("running FS")
             X_train, X_test = X[train_index], X[test_index]
             y_train, y_test = y[train_index], y[test_index]

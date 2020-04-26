@@ -37,7 +37,7 @@ def threshold_score(rankings, scoring, threshold):
     selection = [] 
     selection_indices = []
     #remove = []
-    num_features = math.ceil(threshold * len(ranking))
+    num_features = threshold if threshold > 1.0 else math.ceil(threshold * len(ranking))
     for i in range(len(ranking)):
         if ranking[i] < num_features:
             selection.append(True)

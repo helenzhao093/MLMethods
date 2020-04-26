@@ -11,6 +11,27 @@ import math
 
 # Maximum Relevance and Minimum Redundancy
 # https://arxiv.org/pdf/1908.05376.pdf
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import mutual_info_score
+from scipy.stats import pearsonr, f_oneway
+from scipy.stats import entropy
+from math import log, e
+import random
+import time
+import heapq
+import math
+import matplotlib.pyplot as plt
+
+def plot_score(score):
+    plt.figure(figsize=(16,8))
+    plt.plot(score)
+    plt.xlabel('# of feature')
+    plt.ylabel('score')
+    plt.show()
+
+# Maximum Relevance and Minimum Redundancy
+# https://arxiv.org/pdf/1908.05376.pdf
 def MI_Matrix(X):
     #start_time = time.time()
     num_features = len(X[0])
@@ -20,21 +41,29 @@ def MI_Matrix(X):
         for j in range(i, num_features):
             feature_scores.append(1/num_features * mutual_info_score(X[:,i], X[:,j]))
         scores.append(feature_scores)
-    #end_time = time.time()
-    #print("Run time = {}".format(end_time - start_time))
     return scores
+
+def add_max_score_to_list(temp_scores, current_score, selected_indices, selected_indices_list):
+    max_score_index = np.argmax(np.array(temp_scores))
+    current_score.append(temp_scores[max_score_index])
+    selected_indices.add(max_score_index)
+    selected_indices_list.append(max_score_index)
 
 # mutual information difference
 def MID(X, y, k):
     num_features = len(X[0])
     start_feature_index = random.randint(0, num_features-1)
     selected_indices = set()
+    selected_indices_list = []
     selected_indices.add(start_feature_index)
+    selected_indices_list.append(start_feature_index)
+    # mutual info score btwn feature and class
     mi_scores = [mutual_info_score(X[:,i], y) for i in range(num_features)]
     
     mi_score_matrix = np.zeros(( num_features , num_features))
+    
+    current_score = []
     for _ in range(k-1):
-        start_time = time.time()
         temp_scores = []
         for i in range(num_features):
             if i in selected_indices:
@@ -52,10 +81,9 @@ def MID(X, y, k):
                             mi_score_matrix[j][i] = np.corrcoef(X[:,i], X[:,j])[0, 1]
                         diff += mi_score_matrix[j][i]
                 temp_scores.append(score - diff/len(selected_indices))
-        selected_indices.add(np.argmax(np.array(temp_scores)))
-        end_time = time.time()
-        #print("Run time = {}".format(end_time - start_time))
-    return selected_indices
+        add_max_score_to_list(temp_scores, current_score, selected_indices, selected_indices_list)
+    plot_score(current_score)
+    return selected_indices_list
 
 # mutual information quotient
 def MIQ(X, y, k):
@@ -64,13 +92,15 @@ def MIQ(X, y, k):
     
     start_feature_index = random.randint(0, num_features-1)
     selected_indices = set()
+    selected_indices_list = []
     selected_indices.add(start_feature_index)
-    mi_scores = [mutual_info_score(X[:,i], y) for i in range(num_features)]
+    selected_indices_list.append(start_feature_index)
     
+    mi_scores = [mutual_info_score(X[:,i], y) for i in range(num_features)]
     mi_score_matrix = np.zeros(( num_features , num_features))
+    
+    current_score = []
     for _ in range(k-1):
-        start_time = time.time()
-        #print ('selecting')
         temp_scores = []
         for i in range(num_features):
             if i in selected_indices:
@@ -88,21 +118,17 @@ def MIQ(X, y, k):
                             mi_score_matrix[j][i] = np.corrcoef(X[:,i], X[:,j])[0, 1]
                         q += mi_score_matrix[j][i]
                 temp_scores.append(mi_score/(q/len(selected_indices)))
-        selected_indices.add(np.argmax(np.array(temp_scores)))
-        end_time = time.time()
-        #print("Run time = {}".format(end_time - start_time))
-    return selected_indices
+        add_max_score_to_list(temp_scores, current_score, selected_indices, selected_indices_list)
+    plot_score(current_score)
+    return selected_indices_list
 
 def pearson_matrix(X):
-    start_time = time.time()
     scores = []
     for i in range(len(X[0])):
         feature_scores = []
         for j in range(i, len(X[0])):
             feature_scores.append(1/len(X[0]) * np.corrcoef(X[:,i], X[:,j])[0, 1] ) 
         scores.append(feature_scores)
-    end_time = time.time()
-    # print("Run time = {}".format(end_time - start_time))
     return scores
 
 # ftest for relevance, pearson for redundancy  
@@ -112,11 +138,14 @@ def FCD(X, y, k):
     
     start_feature_index = random.randint(0, num_features-1)
     selected_indices = set()
+    selected_indices_list = []
     selected_indices.add(start_feature_index)
+    selected_indices_list.append(start_feature_index)
     
     pearson_score_matrix = np.zeros(( num_features , num_features))
+    
+    current_score = []
     for _ in range(k-1):
-        start_time = time.time()
         temp_scores = []
         for i in range(num_features):
             if i in selected_indices:
@@ -136,10 +165,9 @@ def FCD(X, y, k):
                         diff += pearson_score_matrix[j][i]
                     #diff += np.corrcoef(X[:,i], X[:,j])[0, 1]
                 temp_scores.append(f_test_score - diff/len(selected_indices))
-        end_time = time.time()
-        #print("Run time = {}".format(end_time - start_time))
-        selected_indices.add(np.argmax(np.array(temp_scores)))
-    return selected_indices
+        add_max_score_to_list(temp_scores, current_score, selected_indices, selected_indices_list)
+    plot_score(current_score)
+    return selected_indices_list
 
 def FCQ(X, y, k):
     num_features = len(X[0])
@@ -147,12 +175,13 @@ def FCQ(X, y, k):
     
     start_feature_index = random.randint(0, num_features-1)
     selected_indices = set()
+    selected_indices_list = []
     selected_indices.add(start_feature_index)
+    selected_indices_list.append(start_feature_index)
     
     pearson_score_matrix = np.zeros(( num_features , num_features))
-    
+    current_score = []
     for _ in range(k-1):
-        start_time = time.time()
         temp_scores = []
         for i in range(num_features):
             if i in selected_indices:
@@ -171,10 +200,9 @@ def FCQ(X, y, k):
                             pearson_score_matrix[j][i] = np.corrcoef(X[:,i], X[:,j])[0, 1]
                         q += pearson_score_matrix[j][i]
                 temp_scores.append(f_test_score/(q/len(selected_indices)))
-        end_time = time.time()
-        #("Run time = {}".format(end_time - start_time))
-        selected_indices.add(np.argmax(np.array(temp_scores)))
-    return selected_indices
+        add_max_score_to_list(temp_scores, current_score, selected_indices, selected_indices_list)
+    plot_score(current_score)
+    return selected_indices_list
 
 def RFCQ(X, y, k):
     num_features = len(X[0])
@@ -183,12 +211,13 @@ def RFCQ(X, y, k):
     
     start_feature_index = random.randint(0, num_features-1)
     selected_indices = set()
+    selected_indices_list = []
     selected_indices.add(start_feature_index)
+    selected_indices_list.append(start_feature_index)
     
     pearson_score_matrix = np.zeros(( num_features , num_features))
-    
+    current_score = []
     for _ in range(k-1):
-        start_time = time.time()
         temp_scores = []
         for i in range(num_features):
             if i in selected_indices:
@@ -207,10 +236,10 @@ def RFCQ(X, y, k):
                             pearson_score_matrix[j][i] = np.corrcoef(X[:,i], X[:,j])[0, 1]
                         q += pearson_score_matrix[j][i]
                 temp_scores.append(rf_score/(q/len(selected_indices)))
-        end_time = time.time()
-        #print("Run time = {}".format(end_time - start_time))
-        selected_indices.add(np.argmax(np.array(temp_scores)))
-    return selected_indices
+        
+        add_max_score_to_list(temp_scores, current_score, selected_indices, selected_indices_list)
+    plot_score(current_score)
+    return selected_indices_list
 
 def SU(x_i, x_j):
     return 2 * (mutual_info_score(x_i, x_j) / (entropy2(x_i) + entropy2(x_j)))
@@ -252,12 +281,15 @@ def CFS(X, y, k):
         
     start_index = np.argmax(np.array(merit_feature_class))
     selected_indices = set()
-    selected_indices.add(start_index)
+    selected_indices_list = []
+    selected_indices.add(start_feature_index)
+    selected_indices_list.append(start_feature_index)
     
     sum_cf = merit_feature_class[start_index]
     sum_ff = 0
     overall_merit = 0
     num_ff = 0
+    current_score = []
     for _ in range(k-1):
         start_time = time.time()
         current_merits = []
@@ -278,11 +310,9 @@ def CFS(X, y, k):
                 sum_ff -= added_sum_ff
             else:
                 current_merits.append(-float('inf'))
-        #print(current_merits)
-        selected_indices.add(np.argmax(np.array(current_merits)))
-        end_time = time.time()
-        #print("Run time = {}".format(end_time - start_time))
-    return selected_indices
+        add_max_score_to_list(temp_scores, current_score, selected_indices, selected_indices_list)
+    plot_score(current_score)
+    return selected_indices_list
 
 def num_ff_interactions(k):
     count = 0
@@ -306,14 +336,15 @@ def CFS_heuristic_search(X, y, k):
     
     start_index = random.randint(0, len(cf_scores)-1)
     selected_indices = set()
-    selected_indices.add(start_index)
+    selected_indices_list = []
+    selected_indices.add(start_feature_index)
+    selected_indices_list.append(start_feature_index)
+    
     h = [] 
     # total score cf score, ff score, 
     heapq.heappush(h, (-cf_scores[start_index], (cf_scores[start_index], 0, selected_indices)))
     while len(selected_indices) < k:
-        #start_time = time.time()
         merit, info = heapq.heappop(h)
-        #print(info)
         cf, ff, cur_indices = info[0], info[1], info[2]
         for i in range(num_features):
             if i not in cur_indices: # not already selected
@@ -332,11 +363,8 @@ def CFS_heuristic_search(X, y, k):
                 heapq.heappush(h, (-merit, (cf, ff, temp)))
                 cf -= cf_scores[i]
                 ff -= added_ff
-        #end_time = time.time()
-        #print("Run time = {}".format(end_time - start_time))
         selected_indices = cur_indices 
     return selected_indices
-
 
 class mRMR():
     def __init__(self, k=10, score_func='MID'):
@@ -362,7 +390,7 @@ class mRMR():
         elif self.score_func == 'CFS Heuristic':
             self.selected_indices = CFS_heuristic_search(X, y, k)
     
-    def transform(self, X):
-        return X[:, list(self.selected_indices)]
-
-        
+    def transform(self, X, k=None):
+        if k is not None and k < len(self.selected_indices):
+            return X[:, self.selected_indices[:k]]
+        return X[:, self.selected_indices]
