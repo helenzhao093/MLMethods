@@ -1,4 +1,4 @@
-# Emsemble
+# Feature Selection
 Emsembles are meta-estimators that fit a number of classifiers on various subsets of the dataset. 
 
 ## Emsemble Feature Selection
@@ -44,7 +44,27 @@ emsembleFS.selection_indices
 array([ 3,  6,  7,  9, 10, 12, 20, 21, 22, 23, 26, 27])
 """
 ```
+## Maximum Relevance and Minimum Redundancy (mRMR) Feature Selection Methods
+Selects features considering both the relevance for predicting the target variable and the redundancy within the selected features. (https://arxiv.org/pdf/1908.05376.pdf)
+### mRMR Variants
+- MID (mutual information difference) :  Mutual information between feature and target variable to calculate relevance and mutual information between each pair of features to calculate redundancy. Difference is used to balance the relevance and redundancy.
+- MIQ (mutual information quotient) :  Quotient used to balance the two.
+- FCD (F-test correlation difference) : F-statistic to score relevance and Pearson correlation to score redundancy. Difference used to balance the two.
+- FCQ (F-test correlation quotient): Quotient used to balance the two.
+- RFCQ (Random Forest correlation quotient) : Random forest importance score to score relevance. Pearson correlation to score redundancy. Quotient used to balance. 
 
+### Parameters
+- score_func : the mRMR variant to used
+- k : the number of features to select
+
+### Example
+```
+selector = mRMR(score_func='MIQ', k=10)
+selector.fit(X, y)
+X_transformed = selector.transform(X)
+```
+
+# Classification
 ## Homogeneous Emsemble
 The Homogeneous Emsemble runs the same feature selection method and classification algorithm on N subset of the dataset to generate N classifiers.
 
@@ -104,7 +124,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 
 X_dev, X_train, y_dev, y_test = train_test_split(X, y, test_size=0.3)
-X_train, X_holdout, y_train, y_holdout = train_test_split(X_train, y_train, test_size=0.2)
+X_train, X_holdout, y_train, y_holdout = train_test_split(X_dev, y_dev, test_size=0.2)
 clf = ThresholdClassifier(LogisticRegression(), multilabel=True)
 clf.fit(X_train, y_train)
 clf.optimize_threshold(X_holdout, y_holdout)
@@ -125,37 +145,4 @@ clf.get_scores(y_test, predictions[:,1], 1))
  'auc': 0.952685421994885, 
  'f1': 0.9635036496350365}
 """
-```
-
-### Cross Validation Example with Feature Selection
-- For each fold, divide the training dataset into N subsets.
-- Run feature selection and generate a threshold classifier on each subset. 
-- Results in N classifiers for each fold. 
-
-```python
-from sklearn.model_selection import StratifiedKFold, ShuffleSplit
-from sklearn.feature_selection import SelectFromModel
-from sklearn.linear_model import LogisticRegression
-
-results = pd.DataFrame(columns=["accuracy", "precision", "recall", "auc", "f1"]) 
-shuffle_splitter = ShuffleSplit(n_splits=5, test_size=.2)
-CVSplitter = StratifiedKFold(n_splits=5)
-for train_index, test_index in CVSplitter.split(X, y):
-    X_dev, X_test = X[train_index], X[test_index]
-    y_dev, y_test = y[train_index], y[test_index]
-    for train_index, test_index in shuffle_splitter.split(X_dev, y_dev):
-        X_train, X_holdout = X[train_index], X[test_index]
-        y_train, y_holdout = y[train_index], y[test_index]
-
-        # Feature selection 
-        feature_selector = EmsembleFS(SelectFromModel(estimator= LogisticRegression()), shuffle_splitter, combine='vote-threshold', threshold=3)
-        feature_selector.fit(X_train, y_train)
-
-        # threshold classifier
-        clf = ThresholdClassifier(LogisticRegression())
-        clf.fit(feature_selector.transform(X_train), y_train)
-        clf.optimize_threshold(feature_selector.transform(X_holdout), y_holdout)
-        predictions = clf.predict(feature_selector.transform(X_test))
-        results = results.append(clf.get_scores(y_test, predictions[:,1]), ignore_index=True)
-
 ```

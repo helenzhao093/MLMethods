@@ -279,13 +279,13 @@ def CFS(X, y, k):
             scores.append(SU(X[:,i], X[:,j]))
         rff.append(scores)
         
-    start_index = np.argmax(np.array(merit_feature_class))
+    start_feature_index = np.argmax(np.array(merit_feature_class))
     selected_indices = set()
     selected_indices_list = []
     selected_indices.add(start_feature_index)
     selected_indices_list.append(start_feature_index)
     
-    sum_cf = merit_feature_class[start_index]
+    sum_cf = merit_feature_class[start_feature_index]
     sum_ff = 0
     overall_merit = 0
     num_ff = 0
@@ -310,7 +310,7 @@ def CFS(X, y, k):
                 sum_ff -= added_sum_ff
             else:
                 current_merits.append(-float('inf'))
-        add_max_score_to_list(temp_scores, current_score, selected_indices, selected_indices_list)
+        add_max_score_to_list(current_merits, current_score, selected_indices, selected_indices_list)
     plot_score(current_score)
     return selected_indices_list
 
