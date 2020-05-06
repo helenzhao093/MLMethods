@@ -1,20 +1,19 @@
 # Feature Selection
-Emsembles are meta-estimators that fit a number of classifiers on various subsets of the dataset. 
 
 ## Emsemble Feature Selection
-The Emsemble Feature Selection class runs the provided feature selection method on N subset of the dataset 
+Emsembles are meta-estimators that fit a number of classifiers on various subsets of the dataset. 
+Emsemble Feature Selection class runs the provided feature selection method on N subset of the dataset 
 and generates N feature selection subsets and/or rankings. 
-The N selections/rankings are combined to obtain a final feature selection. 
-The class provides various methods of combinating feature subsets.
+The N selections/rankings are combined using the provided combination method to obtain a final feature selection. 
 
-### Combination of Output Methods
+### Emsemble Feature Selection Combination Methods
 #### Subset combination options: 
-- union : the union of the subsets of selected features 
-- intersection : the intersection of the subsets of selected features 
-- vote-threshold : the features selected at least x amount of times
+- union : the union of the feature selection subsets 
+- intersection : the intersection of the feature selection subsets
+- vote-threshold : features selected at least x amount of times
 
 #### Ranking combination options
-The feature rankings are combined, the features are sorted, and a threshold is set to obtain a subset of the features. 
+Feature rankings are combined and a threshold is set to obtain a subset of the features. 
 The options to assign rank to a feature are:
 - mean-rank: mean of the N ranking 
 - min-rank: the minimum of the N rankings
@@ -25,7 +24,7 @@ The options to assign rank to a feature are:
 - selector : the base feature selection algorithm
 - splitter : method for generating subsets of the dataset 
 - combine : method for combining feature rankings; options are listed above 
-- threshold: if combine is a ranking option then threshold is set to obtain number of features. 
+- threshold: if combine is a ranking option then threshold is set to number of features to select. 
 if combine is vote-threshold then threshold is the number of times a feature has to be selected to be in the final set. 
 
 ### Example
@@ -37,7 +36,7 @@ from sklearn.model_selection import ShuffleSplit
 estimator = LogisticRegression()
 selector = RFECV(estimator, step=0.1, cv=5)
 splitter = ShuffleSplit(n_splits=5, test_size=.2)
-emsembleFS = EmsembleFS(selector, splitter, combine='vote-threshold', threshold=4)
+emsembleFS = EmsembleFS(selector, splitter, combine='vote-threshold', threshold=4) # features selected 4 out of 5 times are outputted
 emsembleFS.fit(X, y)
 emsembleFS.selection_indices
 """
@@ -60,6 +59,28 @@ Selects features considering both the relevance for predicting the target variab
 ### Example
 ```
 selector = mRMR(score_func='MIQ', k=10)
+selector.fit(X, y)
+X_transformed = selector.transform(X)
+```
+
+## Genetic Algorithm 
+Feature selections are individuals and are binary encoded (1 means included, 0 means excluded). Initalize a population of individuals of size m. Calculate the fitness of the individual based on the performance metric of the base classifier used the feature selection corresponding to the individual. In each generation, create a new population of size m. Parents are selected from the current population based on rank selection. Parents crossed-over; In single point crossover, binary string from beginning to the crossover point is copied from one parent, the rest is copied from the second parent. Selected bits are then mutated based on the probability of mutation. The fitness of the population is recalculated. When the max number of generations is reached or the fitness stopped improving, the most fit individual from the last generation is outputed. 
+
+### Parameters
+- clf - the base classifier used to for classification 
+- m - size of population for every generation
+- metric - performance metric used as fitness of individual (f1, accuracy, precision, recall, auc)
+- crossover - which crossover operator to use (single, double, uniform)
+- adaptive - if True, adapt the crossover and mutuation probability according to the fitness of the individual
+- p_crossover - probability of crossover btw 0 and 1
+- p_mutation - probability of mutation btw 0 and 1
+- max_generations - max number of generations 
+- tol - if average fitness does not differ by tol for 5 generation then stop 
+
+### Example
+```
+base_clf = LogisticRegression()
+selector = AGA(base_clf, 50, metric='f1', crossover='single', max_generations=50, tol=0.001, adaptive=True)
 selector.fit(X, y)
 X_transformed = selector.transform(X)
 ```

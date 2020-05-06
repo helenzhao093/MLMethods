@@ -6,7 +6,7 @@ import random
 from sklearn.metrics import roc_auc_score, f1_score, precision_score, recall_score, accuracy_score
 
 class AGA():
-    def __init__(self, clf, m, cv=None, metric='f1', crossover='single', max_generations=5, tol=0.01):
+    def __init__(self, clf, m, cv=None, metric='f1', crossover='single', p_crossover=0.6, p_mutation=0.1, max_generations=5, tol=0.01, adaptive=True):
         self.base_clf = clf
         self.m = m
         self.cv = cv
@@ -14,6 +14,9 @@ class AGA():
         self.crossover = crossover
         self.max_generations = max_generations
         self.tol = tol
+        self.adaptive = adaptive
+        self.p_crossover = p_crossover
+        self.p_mutation = p_mutation
     
     def init_population(self, num_features):
         # initialize m binary feature selections
@@ -60,8 +63,10 @@ class AGA():
         self.proba = np.array([rank/sum_rank for rank in ranking])
         
     def cal_crossover_proba(self, i, j):
-        k1 = 0.9
-        k2 = 0.6
+        if self.adaptive == False:
+            return self.p_crossover
+        k1 = max(0.9, self.p_crossover)
+        k2 = min(0.9, self.p_crossover)
         f = self.fitnesses[i] if self.fitnesses[i] > self.fitnesses[j] else self.fitnesses[j]
         if f >= self.avg_fitness:
             return k1 * (self.max_fitness - f) / (self.max_fitness - self.avg_fitness)
@@ -69,8 +74,10 @@ class AGA():
             return k2
     
     def cal_mutation_proba(self, i, j):
-        k3 = 0.1
-        k4 = 0.001
+        if self.adaptive == False:
+            return self.p_mutation
+        k3 = max(self.p_mutation, 0.001)
+        k4 = min(self.p_mutation, 0.001)
         f = self.fitnesses[i] if self.fitnesses[i] > self.fitnesses[j] else self.fitnesses[j]
         if f >= self.avg_fitness:
             return k3 * (self.max_fitness - f) / (self.max_fitness - self.avg_fitness)
